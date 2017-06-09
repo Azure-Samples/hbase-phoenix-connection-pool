@@ -1,4 +1,3 @@
-from threading import Thread,Lock
 from Queue import Queue
 import multiprocessing as mp
 #from multiprocessing.pool import ThreadPool
@@ -7,8 +6,8 @@ from timeit import default_timer as timer
 import phoenixdb
 import sys
 
-class QueryEngine:
 
+class QueryEngine:
   def __init__(self, db_urls, concurrency, num_connections, round_robin=False, primary_server=0):
     self.db_urls = db_urls
     self.pool = ThreadPool(concurrency)
@@ -24,6 +23,9 @@ class QueryEngine:
       self.connections.append((cursor, Lock()))
 
   def conn_and_query(self, (idx, sql)):
+    """
+    Connect to a Phoenix Query Server and execute query
+    """
     db_url = self.db_urls[self.primary_server] if not self.round_robin \
                else self.db_urls[idx%len(self.db_urls)]
     db = phoenixdb.connect(db_url)
@@ -35,6 +37,9 @@ class QueryEngine:
     return res
     
   def get_conn_and_query(self, (idx, sql)):
+    """
+    Get a connection from connection pool and execute query
+    """
     self.connections[idx%self.num_connections][1].acquire()
     cursor = self.connections[idx%self.num_connections][0]
     cursor.execute(sql)
@@ -44,6 +49,9 @@ class QueryEngine:
 
 
   def sequential_mode(self, queries):
+    """
+    Run queries sequentially.
+    """
     results = []
     for query in queries:
       conn = phoenixdb.connect(self.db_urls[0])
@@ -54,9 +62,18 @@ class QueryEngine:
     return results
 
   def threadpool_mode(self, queries):
+    """
+    Run queries in thread pool mode.
+    Each thread creates a connection, execute query and close the connection.
+    """
     results = self.pool.map(self.conn_and_query, enumerate(queries))
     return results
 
   def connectionpool_mode(self, queries):
+    """
+    Run the queries in connection pool mode, thread pool is also used
+    Each thread gets a connection from the connection pool, execute query and put
+    the connection back to the connection pool
+    """
     results = self.pool.map(self.get_conn_and_query, enumerate(queries))
     return results
