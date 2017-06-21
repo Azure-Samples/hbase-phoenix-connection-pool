@@ -8,12 +8,24 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.concurrent.BlockingQueue;
 
+/*
+ * Class for pooling connections to phoenix query server
+ */
 public class QueryConnectionPool {
 	private ExecutorService executor;
 	private BlockingQueue<Connection> connections;
 	private String[] servers;
 	private boolean round_robin;
 	
+	/*
+	 * Create a connection pool and a thread pool for query execution. 
+	 * Each thread takes a connection from the connection pool, execute the query and 
+	 * put the connection back to the pool
+	 * @param concurrency     - size of thread pool
+	 * @param num_connections - number of connections to be created
+	 * @param servers         - phoenix query servers in the cluster
+	 * @param round-robin     - whether to select from servers in Round-Robin mode
+	 */
 	public QueryConnectionPool(int concurrency, int num_connections, String[] servers, boolean round_robin) {
 		this.executor = Executors.newFixedThreadPool(concurrency);
 		connections = new LinkedBlockingQueue<Connection>(num_connections);
@@ -24,6 +36,9 @@ public class QueryConnectionPool {
 		}
 	}
 	
+	/*
+	 * Get the URL string for connection
+	 */
 	private String getURL(int idx) {
 		if (round_robin) { 
 			return servers[idx % servers.length];
@@ -32,7 +47,9 @@ public class QueryConnectionPool {
 		}
 	}
 	
-	
+	/*
+	 * Execute the queries concurrently
+	 */
 	@SuppressWarnings("finally")
 	public ResultSet[] executeQueries(String[] queries) {
 		ResultSet[] results = new ResultSet[queries.length];
@@ -45,7 +62,7 @@ public class QueryConnectionPool {
 			executor.shutdown();
 			executor.awaitTermination(100, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			System.out.println(e.getMessage());
 			e.printStackTrace();
 		} finally {
 		return results;
