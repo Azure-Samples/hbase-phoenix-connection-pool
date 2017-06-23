@@ -1,0 +1,4 @@
+wn3-guanyu.xxx.cloudapp.net
+wn4-guanyu.xxx.cloudapp.net
+wn2-guanyu.xxx.cloudapp.net
+wn5-guanyu.xxx.cloudapp.net
